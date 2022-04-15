@@ -22,7 +22,7 @@ class Main_page extends MY_Controller
         parent::__construct();
 
         $this->responseParams = new stdClass();
-
+        $this->checkUserAuth();
         if (is_prod())
         {
             die('In production it will be hard to debug! Run as development environment!');
@@ -146,12 +146,6 @@ class Main_page extends MY_Controller
 
     public function buy_boosterpack()
     {
-        // Check user is authorize
-        if ( ! User_model::is_logged())
-        {
-            return $this->response_error(System\Libraries\Core::RESPONSE_GENERIC_NEED_AUTH);
-        }
-
         // TODO: task 5, покупка и открытие бустерпака
     }
 
@@ -165,12 +159,17 @@ class Main_page extends MY_Controller
     public function get_boosterpack_info(int $bootserpack_info)
     {
         // Check user is authorize
-        if ( ! User_model::is_logged())
-        {
-            return $this->response_error(System\Libraries\Core::RESPONSE_GENERIC_NEED_AUTH);
-        }
+
 
 
         //TODO получить содержимое бустерпака
+    }
+
+    private function checkUserAuth(): void
+    {
+        if (!User_model::is_logged()) {
+            http_response_code(401);
+            die('Log in before performing the operation');
+        }
     }
 }
