@@ -20,10 +20,9 @@ class Login_model extends CI_Model {
     }
 
     /**
-     * @return User_model
      * @throws Exception
      */
-    public static function login($id): User_model
+    public static function login($id)
     {
         self::start_session($id);
     }

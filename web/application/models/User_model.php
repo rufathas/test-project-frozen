@@ -263,13 +263,15 @@ class User_model extends Emerald_model {
      * @param float $sum
      *
      * @return bool
-     * @throws \ShadowIgniterException
      */
     public function add_money(float $sum): bool
     {
-        // TODO: task 4, добавление денег
-
-        return TRUE;
+        $setBalance = $this->set_wallet_balance($this->get_wallet_balance()+$sum);
+        $setTotal  = $this->set_wallet_total_refilled($this->get_wallet_total_refilled()+$sum);
+        if (!$setBalance || !$setTotal) {
+            return false;
+        }
+        return true;
     }
 
 

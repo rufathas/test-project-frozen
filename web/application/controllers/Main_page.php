@@ -1,5 +1,6 @@
 <?php
 
+use Model\Analytics_model;
 use Model\Boosterpack_model;
 use Model\Comment_model;
 use Model\Login_model;
@@ -110,10 +111,25 @@ class Main_page extends MY_Controller
 
     public function add_money()
     {
-        // TODO: task 4, пополнение баланса
-
         $sum = (float)App::get_ci()->input->post('sum');
-
+        if (!$sum || !is_float($sum)) {
+            return $this->response(['status' => 'invalid params'], 400);
+        }
+        $userId = User_model::get_user()->get_id();
+        $logArray = [
+            'user_id' => $userId,
+            'object' => 'wallet',
+            'action' => 'replenishment',
+            'amount' => $sum
+        ];
+        $response = (new User_model($userId))->add_money($sum);
+        if (!$response) {
+            $logArray['action'] = 'error replenishment';
+            Analytics_model::create($logArray);
+            return $this->response_error('problems with adding funds to your account', [], 400);
+        }
+        Analytics_model::create($logArray);
+        return $this->response_success();
     }
 
     public function get_post(int $post_id) {
