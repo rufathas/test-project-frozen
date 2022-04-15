@@ -23,11 +23,11 @@ class Login_model extends CI_Model {
      * @return User_model
      * @throws Exception
      */
-    public static function login(): User_model
+    public static function login($id): User_model
     {
         // TODO: task 1, аутентификация
 
-        self::start_session();
+        self::start_session($id);
     }
 
     public static function start_session(int $user_id)

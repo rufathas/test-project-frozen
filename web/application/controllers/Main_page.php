@@ -1,6 +1,7 @@
 <?php
 
 use Model\Boosterpack_model;
+use Model\Login_model;
 use Model\Post_model;
 use Model\User_model;
 
@@ -12,11 +13,13 @@ use Model\User_model;
  */
 class Main_page extends MY_Controller
 {
+    private $responseParams;
 
     public function __construct()
     {
-
         parent::__construct();
+
+        $this->responseParams = new stdClass();
 
         if (is_prod())
         {
@@ -45,14 +48,22 @@ class Main_page extends MY_Controller
 
     public function login()
     {
-        // TODO: task 1, аутентификация
-
+        $this->responseParams->login = App::get_ci()->input->post('login');
+        $this->responseParams->password = App::get_ci()->input->post('password');
+        if (!$this->responseParams->login || !$this->responseParams->password) {
+            return $this->response(['status' => 'Write correct data'],403);
+        }
+        $user = User_model::find_user_by_email($this->responseParams->login);
+        if($user->get_password() !== $this->responseParams->password) {
+            return $this->response(['status' => 'Incorrect login or password'],403);
+        }
+        Login_model::login($user->get_id());
         return $this->response_success();
     }
 
     public function logout()
     {
-        // TODO: task 1, аутентификация
+        Login_model::logout();
     }
 
     public function comment()
