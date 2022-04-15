@@ -92,8 +92,11 @@ class Main_page extends MY_Controller
             return $this->response("You don't have enough points to like",400);
         }
         $comment = new Comment_model($comment_id);
+        $answer = $user->decrement_likes();
+        if (!$answer) {
+            return $this->response_error('Technical problems', [], 400);
+        }
         $comment->increment_likes();
-        $user->set_likes_balance($user->get_likes_balance() - 1);
         $this->response_success();
     }
 
@@ -104,8 +107,11 @@ class Main_page extends MY_Controller
             return $this->response("You don't have enough points to like",400);
         }
         $post = new Post_model($post_id);
+        $answer = $user->decrement_likes();
+        if (!$answer) {
+            return $this->response_error('Technical problems', [], 400);
+        }
         $post->increment_likes();
-        $user->set_likes_balance($user->get_likes_balance() - 1);
         $this->response_success();
     }
 
