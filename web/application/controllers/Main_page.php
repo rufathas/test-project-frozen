@@ -86,12 +86,26 @@ class Main_page extends MY_Controller
 
     public function like_comment(int $comment_id)
     {
-        // TODO: task 3, лайк комментария
+        $user = User_model::get_user();
+        if($user->get_likes_balance()===0) {
+            return $this->response("You don't have enough points to like",400);
+        }
+        $comment = new Comment_model($comment_id);
+        $comment->increment_likes();
+        $user->set_likes_balance($user->get_likes_balance() - 1);
+        $this->response_success();
     }
 
     public function like_post(int $post_id)
     {
-        // TODO: task 3, лайк поста
+        $user = User_model::get_user();
+        if($user->get_likes_balance()===0) {
+            return $this->response("You don't have enough points to like",400);
+        }
+        $post = new Post_model($post_id);
+        $post->increment_likes();
+        $user->set_likes_balance($user->get_likes_balance() - 1);
+        $this->response_success();
     }
 
     public function add_money()

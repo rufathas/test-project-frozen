@@ -208,17 +208,10 @@ class Post_model extends Emerald_Model
         return static::transform_many(App::get_s()->from(self::CLASS_TABLE)->many());
     }
 
-    /**
-     * @param User_model $user
-     *
-     * @return bool
-     * @throws Exception
-     */
-    public function increment_likes(User_model $user): bool
+    public function increment_likes(): void
     {
-        // TODO: task 3, лайк поста
+        $this->set_likes($this->get_likes()+1);
     }
-
 
     /**
      * @param Post_model $data

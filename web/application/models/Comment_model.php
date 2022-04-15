@@ -237,15 +237,9 @@ class Comment_model extends Emerald_Model {
         return static::transform_many(App::get_s()->from(self::CLASS_TABLE)->where(['assign_id' => $assign_id])->orderBy('time_created', 'ASC')->many());
     }
 
-    /**
-     * @param User_model $user
-     *
-     * @return bool
-     * @throws Exception
-     */
-    public function increment_likes(User_model $user): bool
+    public function increment_likes() : void
     {
-        // TODO: task 3, лайк комментария
+        $this->set_likes($this->get_likes()+1);
     }
 
     /**
