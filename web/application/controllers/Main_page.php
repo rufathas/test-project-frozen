@@ -1,6 +1,7 @@
 <?php
 
 use Model\Boosterpack_model;
+use Model\Comment_model;
 use Model\Login_model;
 use Model\Post_model;
 use Model\User_model;
@@ -68,7 +69,19 @@ class Main_page extends MY_Controller
 
     public function comment()
     {
-        // TODO: task 2, комментирование
+        $this->responseParams->post_id = App::get_ci()->input->post('postId');
+        $this->responseParams->text = App::get_ci()->input->post('commentText');
+        $this->responseParams->reply_id = App::get_ci()->input->post('replyId');
+        if (!$this->responseParams->post_id || !$this->responseParams->text) {
+            $this->response(['status' =>'invalid params'],400);
+        }
+        Comment_model::create([
+            'user_id'=>User_model::get_session_id(),
+            'assign_id'=>$this->responseParams->post_id,
+            'text'=>$this->responseParams->text,
+            'reply_id' => $this->responseParams->reply_id
+        ]);
+        $this->response_success();
     }
 
     public function like_comment(int $comment_id)
@@ -90,7 +103,9 @@ class Main_page extends MY_Controller
     }
 
     public function get_post(int $post_id) {
-        // TODO получения поста по id
+        $postOblect = new Post_model($post_id);
+        $post =  Post_model::preparation($postOblect, 'full_info');
+        return $this->response_success(['post' => $post]);
     }
 
     public function buy_boosterpack()

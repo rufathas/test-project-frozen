@@ -248,11 +248,6 @@ class Comment_model extends Emerald_Model {
         // TODO: task 3, лайк комментария
     }
 
-    public static function get_all_by_replay_id(int $reply_id)
-    {
-        // TODO task 2, дополнительно, вложенность комментариев
-    }
-
     /**
      * @param self $data
      * @param string $preparation

@@ -25,8 +25,6 @@ class Login_model extends CI_Model {
      */
     public static function login($id): User_model
     {
-        // TODO: task 1, аутентификация
-
         self::start_session($id);
     }
 
