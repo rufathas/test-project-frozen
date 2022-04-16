@@ -183,4 +183,14 @@ class Analytics_model extends Emerald_Model
         return static::transform_many(App::get_s()->from(self::CLASS_TABLE)->where(['user_id' => $user_id])->orderBy('time_created', 'ASC')->many());
     }
 
+    public static function info_log(string $object,string $action,float $amount = null, int $object_id = null) : void
+    {
+        self::create([
+            'user_id' => User_model::get_user()->get_id(),
+            'object' => $object,
+            'object_id' =>$object_id,
+            'action' => $action,
+            'amount' => $amount
+        ]);
+    }
 }

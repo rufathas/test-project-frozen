@@ -26,11 +26,11 @@ class Core {
     const RESPONSE_GENERIC_INTERNAL_ERROR = 'internal_error'; // Если у нас excpetion выбил чтото . в info пишем инфу по ошибке.
     const RESPONSE_GENERIC_NEED_AUTH = 'need_auth'; // Если надо авторизоваться
 
-
     const RESPONSE_GENERIC_DISABLED = 'disabled'; // Фунционал отключен или временно не доступен - через сеттинги выключили
     const RESPONSE_GENERIC_NO_ACCESS = 'no_access'; // зарос должен быть только через AJAX
     const RESPONSE_GENERIC_WRONG_PARAMS = 'wrong_params'; // Входящие данные не правлиьные.
     const RESPONSE_GENERIC_UNAVAILABLE = 'unavailable'; // временное или постоянное недоступное действие ( в основном относиться к кейсопену )
+    const RESPONSE_GENERIC_LIKE_BALANCE = 'not have enough points to like'; // на счету не имеется достаточно лайков для действия
 
     const RESPONSE_GENERIC_TRY_LATER = 'try_later'; // action was done before. 2nd time dont need to ask :)
     const RESPONSE_GENERIC_NO_DATA = 'no_data'; // нет данных по данному запросу . Пусто или че ? тоже самое что и сверху

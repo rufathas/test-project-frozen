@@ -175,28 +175,36 @@ class Boosterpack_model extends Emerald_model
      */
     public function open(): int
     {
+        // start transaction
         App::get_s()->set_transaction_repeatable_read()->execute();
         App::get_s()->start_trans()->execute();
 
         try {
             $user = User_model::get_user();
 
+            //check that the user has enough funds
             if ($user->get_wallet_balance() < $this->get_price()) {
                 App::get_s()->rollback()->execute();
                 return 0;
             }
+            $remove_money = $user->remove_money($this->price);
 
             $max_price = $this->get_bank() + $this->get_price() - $this->get_us();
-            $item = $this->get_contains($max_price);
-            $set_bank_result = $this->set_bank($this->get_bank() + $this->get_price() - $this->get_us() - $item->price);
 
-            $remove_money = $user->remove_money($item->price);
+            // take random boosterpack
+            $item = $this->get_contains($max_price);
+
+            // set new data in the profit bank
+            $set_bank_result = $this->set_bank($this->get_bank() + $this->get_price() - $this->get_us() - $item->price);
             $set_like_result = $user->set_likes_balance($user->get_likes_balance() + $item->price);
 
             if ($remove_money && $set_bank_result && $set_like_result && App::get_s()->is_affected()) {
+                Analytics_model::info_log('boosterpack',Transaction_type::WALLET_BALANCE_WITHDRAW,$this->price,$this->get_id());
+                Analytics_model::info_log('boosterpack',Transaction_type::LIKE_BALANCE_REPLENISHMENT,$item->price,$this->get_id());
                 App::get_s()->commit()->execute();
                 return $item->price;
             }
+
             App::get_s()->rollback()->execute();
             return 0;
         } catch (RuntimeException $e) {
@@ -212,7 +220,9 @@ class Boosterpack_model extends Emerald_model
      */
     public function get_contains(int $max_available_likes): stdClass
     {
+        // find max win point
         $item_data = Item_model::find_boosterpack_price($max_available_likes);
+        // take random boosterpack from array, then convert this to object
         return $this->_array_to_object_convert($item_data[array_rand($item_data)]);
     }
 

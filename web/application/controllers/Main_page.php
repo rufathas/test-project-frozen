@@ -1,11 +1,11 @@
 <?php
 
-use Model\Analytics_model;
 use Model\Boosterpack_model;
 use Model\Comment_model;
 use Model\Login_model;
 use Model\Post_model;
 use Model\User_model;
+use System\Libraries\Core;
 
 /**
  * Created by PhpStorm.
@@ -15,14 +15,10 @@ use Model\User_model;
  */
 class Main_page extends MY_Controller
 {
-    private $responseParams;
-
     public function __construct()
     {
         parent::__construct();
 
-        $this->responseParams = new stdClass();
-        //$this->checkUserAuth();
         if (is_prod())
         {
             die('In production it will be hard to debug! Run as development environment!');
@@ -50,17 +46,28 @@ class Main_page extends MY_Controller
 
     public function login()
     {
-        $this->responseParams->login = App::get_ci()->input->post('login');
-        $this->responseParams->password = App::get_ci()->input->post('password');
-        if (!$this->responseParams->login || !$this->responseParams->password) {
-            return $this->response(['status' => 'Write correct data'],403);
+        // get parameters
+        $login = App::get_ci()->input->post('login');
+        $password = App::get_ci()->input->post('password');
+
+        // check for exist
+        if (!$login || !$password) {
+            return $this->response_error(Core::RESPONSE_GENERIC_WRONG_PARAMS,[],400);
         }
-        $user = User_model::find_user_by_email($this->responseParams->login);
-        if($user->get_password() !== $this->responseParams->password) {
-            return $this->response(['status' => 'Incorrect login or password'],403);
+
+        $user = User_model::find_user_by_email($login);
+
+        // compare pass from db and response and check user exist
+        if(!$user || $user->get_password() !== $password) {
+            return $this->response_error(Core::RESPONSE_GENERIC_WRONG_PARAMS,[],400);
         }
+
+        //start session
         Login_model::login($user->get_id());
-        return $this->response_success();
+
+        return $this->response_success([
+            'user' => User_model::preparation($user, 'main_page'),
+        ]);
     }
 
     public function logout()
@@ -71,76 +78,116 @@ class Main_page extends MY_Controller
 
     public function comment()
     {
-        $this->responseParams->post_id = App::get_ci()->input->post('postId');
-        $this->responseParams->text = App::get_ci()->input->post('commentText');
-        $this->responseParams->reply_id = App::get_ci()->input->post('replyId');
-        if (!$this->responseParams->post_id || !$this->responseParams->text) {
-            $this->response(['status' =>'invalid params'],400);
+        if (!User_model::is_logged()) {
+            return $this->response_error(Core::RESPONSE_GENERIC_NEED_AUTH,[],401);
         }
+        // get params
+        $post_id = (int)App::get_ci()->input->post('postId');
+        $text = App::get_ci()->input->post('commentText');
+        $reply_id = (int) App::get_ci()->input->post('replyId');
+
+        //check params exist(if isset reply id also check reply id)
+        if ((!$post_id || !$text) || (isset($reply_id) && !$reply_id)) {
+            return $this->response_error(Core::RESPONSE_GENERIC_WRONG_PARAMS, [], 400);
+        }
+
         Comment_model::create([
-            'user_id'=>User_model::get_session_id(),
-            'assign_id'=>$this->responseParams->post_id,
-            'text'=>$this->responseParams->text,
-            'reply_id' => $this->responseParams->reply_id
+            'user_id' => User_model::get_session_id(),
+            'assign_id'=>$post_id,
+            'text'=> htmlentities($text),
+            'reply_id' => $reply_id
         ]);
-        $this->response_success();
+
+        return $this->response_success();
     }
 
-    public function like_comment(int $comment_id)
+    public function like_comment($comment_id)
     {
-        $user = User_model::get_user();
-        if($user->get_likes_balance()===0) {
-            return $this->response("You don't have enough points to like",400);
+        if (!User_model::is_logged()) {
+            return $this->response_error(Core::RESPONSE_GENERIC_NEED_AUTH,[],401);
         }
+
+        $comment_id = (int)$comment_id;
+        if (!$comment_id) {
+            return $this->response_error(Core::RESPONSE_GENERIC_WRONG_PARAMS,[],400);
+        }
+
+        $user = User_model::get_user();
+
+        // check user like balance
+        if($user->get_likes_balance()===0) {
+            return $this->response_error(Core::RESPONSE_GENERIC_LIKE_BALANCE,[],400);
+        }
+
         $comment = new Comment_model($comment_id);
-        $decrement_result = $user->decrement_likes();
+
+        $decrement_result = $user->decrement_likes(__FUNCTION__,$comment->get_id());
         $increment_result = $comment->increment_likes();
+
         if (!$decrement_result || !$increment_result) {
-            return $this->response_error('Technical problems', [], 400);
+            return $this->response_error(Core::RESPONSE_GENERIC_TRY_LATER, [], 500);
         }
-        $this->response_success();
+
+        return $this->response_success(['likes' => $comment->get_likes()]);
     }
 
-    public function like_post(int $post_id)
+    public function like_post($post_id)
     {
-        $user = User_model::get_user();
-        if($user->get_likes_balance()===0) {
-            return $this->response("You don't have enough points to like",400);
+        if (!User_model::is_logged()) {
+            return $this->response_error(Core::RESPONSE_GENERIC_NEED_AUTH,[],401);
         }
+
+        $post_id = (int)$post_id;
+        if (!$post_id) {
+            return $this->response_error(Core::RESPONSE_GENERIC_WRONG_PARAMS,[],400);
+        }
+
+        $user = User_model::get_user();
+
+        // check user like balance
+        if($user->get_likes_balance()===0) {
+            return $this->response_error(Core::RESPONSE_GENERIC_LIKE_BALANCE,[],401);
+        }
+
         $post = new Post_model($post_id);
-        $decrement_result = $user->decrement_likes();
+
+        $decrement_result = $user->decrement_likes(__FUNCTION__,$post->get_id());
         $increment_result = $post->increment_likes();
 
         if (!$decrement_result || !$increment_result) {
-            return $this->response_error('Technical problems', [], 400);
+            return $this->response_error(Core::RESPONSE_GENERIC_TRY_LATER, [], 500);
         }
-        $this->response_success();
+        return $this->response_success(['likes' => $post->get_likes()]);
     }
 
     public function add_money()
     {
+        if (!User_model::is_logged()) {
+            return $this->response_error(Core::RESPONSE_GENERIC_NEED_AUTH,[],401);
+        }
+
         $sum = (float)App::get_ci()->input->post('sum');
-        if (!$sum || !is_float($sum)) {
-            return $this->response(['status' => 'invalid params'], 400);
+
+        if (!$sum) {
+            return $this->response_error(Core::RESPONSE_GENERIC_WRONG_PARAMS,[],400);
         }
+
         $userId = User_model::get_user()->get_id();
-        $logArray = [
-            'user_id' => $userId,
-            'object' => 'wallet',
-            'action' => 'replenishment',
-            'amount' => $sum
-        ];
+
         $response = (new User_model($userId))->add_money($sum);
+
         if (!$response) {
-            $logArray['action'] = 'error replenishment';
-            Analytics_model::create($logArray);
-            return $this->response_error('problems with adding funds to your account', [], 400);
+            return $this->response_error(Core::RESPONSE_GENERIC_TRY_LATER, [], 500);
         }
-        Analytics_model::create($logArray);
         return $this->response_success();
     }
 
-    public function get_post(int $post_id) {
+    public function get_post($post_id) {
+        $post_id = (int)$post_id;
+        if (!$post_id) {
+            return $this->response_error(Core::RESPONSE_GENERIC_WRONG_PARAMS,[],400);
+        }
+
         $postOblect = new Post_model($post_id);
         $post =  Post_model::preparation($postOblect, 'full_info');
         return $this->response_success(['post' => $post]);
@@ -148,41 +195,23 @@ class Main_page extends MY_Controller
 
     public function buy_boosterpack()
     {
-        $boosterpack_id = App::get_ci()->input->post('id');
-        if (!$boosterpack_id) {
-            return $this->response(['status' => 'invalid params'], 400);
+        if (!User_model::is_logged()) {
+            return $this->response_error(Core::RESPONSE_GENERIC_NEED_AUTH,[],401);
         }
+
+        $boosterpack_id = (int) App::get_ci()->input->post('id');
+
+        if (!$boosterpack_id) {
+            return $this->response_error(Core::RESPONSE_GENERIC_WRONG_PARAMS,[],400);
+        }
+
         $boosterpack = new Boosterpack_model($boosterpack_id);
         $open_result = $boosterpack->open();
 
         if(!$open_result) {
-            return $this->response_error(123);
+            return $this->response_error(Core::RESPONSE_GENERIC_TRY_LATER, [], 500);
         }
 
         return $this->response_success(['amount' => $open_result]);
-    }
-
-
-
-
-
-    /**
-     * @return object|string|void
-     */
-    public function get_boosterpack_info(int $bootserpack_info)
-    {
-        // Check user is authorize
-
-
-
-        //TODO получить содержимое бустерпака
-    }
-
-    private function checkUserAuth(): void
-    {
-        if (!User_model::is_logged()) {
-            http_response_code(401);
-            die('Log in before performing the operation');
-        }
     }
 }

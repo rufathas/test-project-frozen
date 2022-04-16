@@ -267,6 +267,7 @@ class User_model extends Emerald_model {
      */
     public function add_money(float $sum): bool
     {
+        // start transaction
         App::get_s()->set_transaction_repeatable_read()->execute();
         App::get_s()->start_trans()->execute();
 
@@ -274,10 +275,14 @@ class User_model extends Emerald_model {
             $set_balance = $this->set_wallet_balance($this->get_wallet_balance() + $sum);
             $set_total = $this->set_wallet_total_refilled($this->get_wallet_total_refilled() + $sum);
 
+            //check for errors exist
             if (!$set_balance || !$set_total || !App::get_s()->is_affected()) {
                 App::get_s()->rollback()->execute();
                 return false;
             }
+
+            Analytics_model::info_log(__FUNCTION__,Transaction_type::WALLET_BALANCE_REPLENISHMENT,$sum);
+
             App::get_s()->commit()->execute();
             return true;
 
@@ -301,8 +306,9 @@ class User_model extends Emerald_model {
 
         try {
             $remove_money_result = $this->set_wallet_balance($this->get_wallet_balance() - $sum);
+            $wallet_withdrawn_result = $this->set_wallet_total_withdrawn($this->get_wallet_total_withdrawn() + $sum);
 
-            if(!$remove_money_result || !App::get_s()->is_affected()) {
+            if(!$wallet_withdrawn_result || !$remove_money_result || !App::get_s()->is_affected()) {
                 App::get_s()->rollback()->execute();
                 return false;
             }
@@ -319,7 +325,7 @@ class User_model extends Emerald_model {
      * @return bool
      * @throws Exception
      */
-    public function decrement_likes(): bool
+    public function decrement_likes($log_object,$object_id): bool
     {
         App::get_s()->from(self::get_table())
             ->where(['id' => $this->get_id()])
@@ -330,7 +336,7 @@ class User_model extends Emerald_model {
         {
             return FALSE;
         }
-
+        Analytics_model::info_log($log_object,Transaction_type::LIKE_BALANCE_WITHDRAW,1,$object_id);
         return TRUE;
     }
 
@@ -368,15 +374,10 @@ class User_model extends Emerald_model {
         return static::transform_many(App::get_s()->from(self::CLASS_TABLE)->many());
     }
 
-    /**
-     * @param string $email
-     *
-     * @return User_model
-     */
-    public static function find_user_by_email(string $login): User_model
+    public static function find_user_by_email(string $login)
     {
         $answer = App::get_s()->from(self::CLASS_TABLE)->where('email',$login)->one();
-        return (new self())->set($answer);
+        return !$answer ? false : (new self())->set($answer);
     }
 
     /**
