@@ -267,12 +267,24 @@ class User_model extends Emerald_model {
      */
     public function add_money(float $sum): bool
     {
-        $setBalance = $this->set_wallet_balance($this->get_wallet_balance()+$sum);
-        $setTotal  = $this->set_wallet_total_refilled($this->get_wallet_total_refilled()+$sum);
-        if (!$setBalance || !$setTotal) {
+        App::get_s()->set_transaction_repeatable_read()->execute();
+        App::get_s()->start_trans()->execute();
+
+        try {
+            $set_balance = $this->set_wallet_balance($this->get_wallet_balance() + $sum);
+            $set_total = $this->set_wallet_total_refilled($this->get_wallet_total_refilled() + $sum);
+
+            if (!$set_balance || !$set_total || !App::get_s()->is_affected()) {
+                App::get_s()->rollback()->execute();
+                return false;
+            }
+            App::get_s()->commit()->execute();
+            return true;
+
+        } catch (RuntimeException $e) {
+            App::get_s()->rollback()->execute();
             return false;
         }
-        return true;
     }
 
 
@@ -280,16 +292,23 @@ class User_model extends Emerald_model {
      * @param float $sum
      *
      * @return bool
-     * @throws \ShadowIgniterException
+     * @throws \ShadowIgniterException|Exception
      */
     public function remove_money(float $sum): bool
     {
         App::get_s()->set_transaction_repeatable_read()->execute();
         App::get_s()->start_trans()->execute();
+
         try {
-            $this->set_wallet_balance($this->get_wallet_balance() - $sum);
+            $remove_money_result = $this->set_wallet_balance($this->get_wallet_balance() - $sum);
+
+            if(!$remove_money_result || !App::get_s()->is_affected()) {
+                App::get_s()->rollback()->execute();
+                return false;
+            }
             App::get_s()->commit()->execute();
-            return TRUE;
+            return true;
+
         } catch (RuntimeException $e) {
             App::get_s()->rollback()->execute();
             return false;

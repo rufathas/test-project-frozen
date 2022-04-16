@@ -237,9 +237,20 @@ class Comment_model extends Emerald_Model {
         return static::transform_many(App::get_s()->from(self::CLASS_TABLE)->where(['assign_id' => $assign_id])->orderBy('time_created', 'ASC')->many());
     }
 
-    public function increment_likes() : void
+    public function increment_likes() : bool
     {
-        $this->set_likes($this->get_likes()+1);
+        App::get_s()->set_transaction_repeatable_read()->execute();
+        App::get_s()->start_trans()->execute();
+
+        $like_result = $this->set_likes($this->get_likes()+1);
+
+        if (!$like_result || !App::get_s()->is_affected()) {
+            App::get_s()->rollback()->execute();
+            return false;
+        }
+        App::get_s()->commit()->execute();
+        return true;
+
     }
 
     /**

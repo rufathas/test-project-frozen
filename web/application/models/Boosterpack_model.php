@@ -183,17 +183,17 @@ class Boosterpack_model extends Emerald_model
 
             if ($user->get_wallet_balance() < $this->get_price()) {
                 App::get_s()->rollback()->execute();
-                return false;
+                return 0;
             }
 
             $max_price = $this->get_bank() + $this->get_price() - $this->get_us();
             $item = $this->get_contains($max_price);
-            $this->set_bank($this->get_bank() + $this->get_price() - $this->get_us() - $item->price);
+            $set_bank_result = $this->set_bank($this->get_bank() + $this->get_price() - $this->get_us() - $item->price);
 
             $remove_money = $user->remove_money($item->price);
-            $user->set_likes_balance($user->get_likes_balance() + $item->price);
+            $set_like_result = $user->set_likes_balance($user->get_likes_balance() + $item->price);
 
-            if($remove_money) {
+            if ($remove_money && $set_bank_result && $set_like_result && App::get_s()->is_affected()) {
                 App::get_s()->commit()->execute();
                 return $item->price;
             }

@@ -93,11 +93,11 @@ class Main_page extends MY_Controller
             return $this->response("You don't have enough points to like",400);
         }
         $comment = new Comment_model($comment_id);
-        $answer = $user->decrement_likes();
-        if (!$answer) {
+        $decrement_result = $user->decrement_likes();
+        $increment_result = $comment->increment_likes();
+        if (!$decrement_result || !$increment_result) {
             return $this->response_error('Technical problems', [], 400);
         }
-        $comment->increment_likes();
         $this->response_success();
     }
 
@@ -108,11 +108,12 @@ class Main_page extends MY_Controller
             return $this->response("You don't have enough points to like",400);
         }
         $post = new Post_model($post_id);
-        $answer = $user->decrement_likes();
-        if (!$answer) {
+        $decrement_result = $user->decrement_likes();
+        $increment_result = $post->increment_likes();
+
+        if (!$decrement_result || !$increment_result) {
             return $this->response_error('Technical problems', [], 400);
         }
-        $post->increment_likes();
         $this->response_success();
     }
 
@@ -147,18 +148,18 @@ class Main_page extends MY_Controller
 
     public function buy_boosterpack()
     {
-        $boosterpackId = App::get_ci()->input->post('id');
-        if (!$boosterpackId) {
+        $boosterpack_id = App::get_ci()->input->post('id');
+        if (!$boosterpack_id) {
             return $this->response(['status' => 'invalid params'], 400);
         }
-        $boosterpack = new Boosterpack_model($boosterpackId);
-        $response = $boosterpack->open();
+        $boosterpack = new Boosterpack_model($boosterpack_id);
+        $open_result = $boosterpack->open();
 
-        if(!$response) {
+        if(!$open_result) {
             return $this->response_error(123);
         }
 
-        return $this->response_success(['amount' => $response]);
+        return $this->response_success(['amount' => $open_result]);
     }
 
 
