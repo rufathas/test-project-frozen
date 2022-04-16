@@ -4,6 +4,7 @@ namespace Model;
 use App;
 use Exception;
 use http\Client\Curl\User;
+use http\Exception\RuntimeException;
 use stdClass;
 use System\Emerald\Emerald_model;
 
@@ -283,9 +284,16 @@ class User_model extends Emerald_model {
      */
     public function remove_money(float $sum): bool
     {
-        // TODO: task 5, списание денег
-
-        return TRUE;
+        App::get_s()->set_transaction_repeatable_read()->execute();
+        App::get_s()->start_trans()->execute();
+        try {
+            $this->set_wallet_balance($this->get_wallet_balance() - $sum);
+            App::get_s()->commit()->execute();
+            return TRUE;
+        } catch (RuntimeException $e) {
+            App::get_s()->rollback()->execute();
+            return false;
+        }
     }
 
     /**

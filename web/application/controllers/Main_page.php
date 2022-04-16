@@ -22,7 +22,7 @@ class Main_page extends MY_Controller
         parent::__construct();
 
         $this->responseParams = new stdClass();
-        $this->checkUserAuth();
+        //$this->checkUserAuth();
         if (is_prod())
         {
             die('In production it will be hard to debug! Run as development environment!');
@@ -66,6 +66,7 @@ class Main_page extends MY_Controller
     public function logout()
     {
         Login_model::logout();
+        redirect('/');
     }
 
     public function comment()
@@ -146,7 +147,18 @@ class Main_page extends MY_Controller
 
     public function buy_boosterpack()
     {
-        // TODO: task 5, покупка и открытие бустерпака
+        $boosterpackId = App::get_ci()->input->post('id');
+        if (!$boosterpackId) {
+            return $this->response(['status' => 'invalid params'], 400);
+        }
+        $boosterpack = new Boosterpack_model($boosterpackId);
+        $response = $boosterpack->open();
+
+        if(!$response) {
+            return $this->response_error(123);
+        }
+
+        return $this->response_success(['amount' => $response]);
     }
 
 
